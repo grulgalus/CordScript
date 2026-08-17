@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent" android:layout_height="match_parent"
+    android:orientation="vertical" android:padding="16dp" android:background="#2C2F33">
+
+    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" 
+        android:text="Discord Token:" android:textColor="#FFFFFF"/>
+    <EditText android:id="@+id/tokenInput" android:layout_width="match_parent" 
+        android:layout_height="wrap_content" android:textColor="#FFFFFF" android:inputType="textPassword"/>
+
+    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" 
+        android:text="CordScript Kód:" android:textColor="#FFFFFF" android:layout_marginTop="16dp"/>
+    <EditText android:id="@+id/codeInput" android:layout_width="match_parent" 
+        android:layout_height="0dp" android:layout_weight="1" android:textColor="#7289DA"
+        android:gravity="top" android:text="prefix: &quot;!&quot;\ncommand ping {\n  reply &quot;Pong z mobilu!&quot;\n}"/>
+
+    <Button android:id="@+id/btnStart" android:layout_width="match_parent" 
+        android:layout_height="wrap_content" android:text="🚀 SPUSTIT BOTA 24/7" android:backgroundTint="#43B581"/>
+    <Button android:id="@+id/btnStop" android:layout_width="match_parent" 
+        android:layout_height="wrap_content" android:text="🛑 ZASTAVIT" android:backgroundTint="#F04747"/>
+</LinearLayout>
