@@ -21,7 +21,9 @@ public class BotService extends Service {
     public int onStartCommand(Intent intent, int flags, int startId) {
         String code = intent.getStringExtra("CODE");
         String token = intent.getStringExtra("TOKEN");
-        boolean useSlash = CordCore.getSetting(code, "slash", "ano").matches("(?i)ano|yes");
+        String lang = intent.getStringExtra("LANG");
+        boolean useSlash = intent.getBooleanExtra("SLASH", true);
+        String prefix = intent.getStringExtra("PREFIX");
 
         NotificationChannel channel = new NotificationChannel("BotChannel", "CordBot", NotificationManager.IMPORTANCE_LOW);
         getSystemService(NotificationManager.class).createNotificationChannel(channel);
@@ -32,7 +34,7 @@ public class BotService extends Service {
 
         new Thread(() -> {
             try {
-                CordScriptParser parser = new CordScriptParser(code);
+                CordScriptParser parser = new CordScriptParser(code, lang, prefix, useSlash);
                 jda = JDABuilder.createDefault(token).enableIntents(GatewayIntent.MESSAGE_CONTENT).addEventListeners(parser).build();
                 jda.awaitReady();
 
@@ -45,8 +47,7 @@ public class BotService extends Service {
         return START_STICKY;
     }
 
-    @Override
-    public void onDestroy() {
+    @Override public void onDestroy() {
         if (jda != null) jda.shutdownNow();
         if (wakeLock != null && wakeLock.isHeld()) wakeLock.release();
         super.onDestroy();
@@ -56,17 +57,19 @@ public class BotService extends Service {
 
 class CordScriptParser extends ListenerAdapter {
     private String prefix;
+    private boolean useSlash;
     private Map<String, String> commands;
 
-    public CordScriptParser(String code) {
-        this.prefix = CordCore.getSetting(code, "prefix", "!");
-        this.commands = CordCore.getCommands(code);
+    public CordScriptParser(String code, String lang, String prefix, boolean useSlash) {
+        this.prefix = prefix;
+        this.useSlash = useSlash;
+        this.commands = CordCore.getCommands(code, lang);
     }
     public Map<String, String> getCommands() { return commands; }
 
     @Override
     public void onMessageReceived(MessageReceivedEvent event) {
-        if (event.getAuthor().isBot()) return;
+        if (useSlash || event.getAuthor().isBot()) return; // Pokud je slash, nereaguje na prefix!
         String msg = event.getMessage().getContentRaw();
         if (msg.startsWith(prefix)) {
             String cmd = msg.substring(prefix.length()).trim().split(" ")[0];
@@ -75,6 +78,6 @@ class CordScriptParser extends ListenerAdapter {
     }
     @Override
     public void onSlashCommandInteraction(SlashCommandInteractionEvent event) {
-        if (commands.containsKey(event.getName())) event.reply(commands.get(event.getName())).queue();
+        if (useSlash && commands.containsKey(event.getName())) event.reply(commands.get(event.getName())).queue();
     }
 }
