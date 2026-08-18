@@ -15,12 +15,19 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
       - name: Build Windows Java Executable
+        shell: bash
         run: |
           mkdir bin
-          # TADY JE TEN ZÁZRAČNÝ FIX: -encoding UTF-8
+          mkdir input_jar
+          
+          # 1. Zkompilování s UTF-8
           javac -encoding UTF-8 -cp core -d bin windows/WindowsApp.java core/com/cordbot/core/CordCore.java
-          jar cfe CordBot.jar WindowsApp -C bin .
-          jpackage --type app-image --name CordBotNode --input . --main-jar CordBot.jar --main-class WindowsApp --dest dist
+          
+          # 2. JAR soubor se vytvoří v izolované čisté složce
+          jar cfe input_jar/CordBot.jar WindowsApp -C bin .
+          
+          # 3. Jpackage bere JEN složku input_jar, takže je to hotové za pár vteřin!
+          jpackage --type app-image --name CordBotNode --input input_jar --main-jar CordBot.jar --main-class WindowsApp --dest dist --verbose
       - name: Upload Windows App
         uses: actions/upload-artifact@v4
         with:
@@ -42,7 +49,6 @@ jobs:
           gradle-version: '8.4'
       - name: Inject Core to Android
         run: |
-          # Zkopíruje sdílené jádro CordCore přímo do Android složky před kompilací
           cp -r core/com android/app/src/main/java/
       - name: Build Android APK
         working-directory: ./android
