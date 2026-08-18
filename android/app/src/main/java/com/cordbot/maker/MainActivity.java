@@ -2,6 +2,7 @@ package com.cordbot.maker;
 
 import android.os.Bundle;
 import android.text.InputType;
+import android.view.WindowManager;
 import android.widget.*;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
@@ -23,13 +24,11 @@ public class MainActivity extends AppCompatActivity {
     String botPrefix = "!";
     
     TextView consoleOut;
-    JDA jda = null; // Bot sedí přímo v hlavní aplikaci!
+    JDA jda = null; 
 
-    // Funkce, která bezpečně vypíše text do zelené konzole
     public void logToConsole(String msg) {
         runOnUiThread(() -> {
             if (consoleOut != null) consoleOut.append(msg + "\n");
-            // Automatické rolování dolů by se dalo přidat přes ScrollView, ale tohle je základ
         });
     }
 
@@ -61,9 +60,10 @@ public class MainActivity extends AppCompatActivity {
                 return;
             }
 
-            logToConsole("🚀 Spouštím bota v živém režimu...");
+            // MAGIE: Přikáže telefonu, aby NIKDY nezhasínal displej!
+            getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+            logToConsole("🚀 Spouštím bota (Displej teď nezhasne!)...");
             
-            // Bot se spustí ve vedlejším vlákně přímo uvnitř aplikace!
             new Thread(() -> {
                 try {
                     CordScriptParser parser = new CordScriptParser(code, botLang, botPrefix, botSlash);
@@ -79,12 +79,10 @@ public class MainActivity extends AppCompatActivity {
                         }
                         logToConsole("✅ Slash příkazy uloženy na Discord!");
                     }
-                } catch (IllegalArgumentException e) {
-                    logToConsole("❌ CHYBA DISCORDU: Chybí ti 'Message Content Intent' na webu!");
-                    jda = null;
                 } catch (Exception e) {
                     logToConsole("❌ CHYBA: " + e.getMessage());
                     jda = null;
+                    runOnUiThread(() -> getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON));
                 }
             }).start();
         });
@@ -93,7 +91,9 @@ public class MainActivity extends AppCompatActivity {
             if (jda != null) {
                 jda.shutdownNow();
                 jda = null;
-                logToConsole("🛑 Bot byl úspěšně zastaven.");
+                // Když se bot vypne, mobil může zase normálně usínat
+                getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+                logToConsole("🛑 Bot byl zastaven. Displej se může opět uspat.");
             } else {
                 logToConsole("⚠️ Bot momentálně neběží.");
             }
@@ -137,7 +137,7 @@ public class MainActivity extends AppCompatActivity {
                 botSlash = slashSwitch.isChecked(); 
                 botPrefix = prefixInput.getText().toString().trim(); 
                 botLang = langSwitch.isChecked() ? "en" : "cz";
-                logToConsole("⚙️ Nastavení bylo uloženo.");
+                logToConsole("⚙️ Nastavení uloženo.");
             }).show();
     }
     
@@ -147,7 +147,6 @@ public class MainActivity extends AppCompatActivity {
         super.onDestroy(); 
     }
 
-    // Náš starý dobrý parser přesunut přímo sem!
     class CordScriptParser extends ListenerAdapter {
         private String prefix; private boolean useSlash; private Map<String, String> commands; 
 
