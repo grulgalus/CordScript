@@ -4,13 +4,13 @@
     android:orientation="vertical" android:padding="16dp" android:background="#2C2F33">
 
     <Button android:id="@+id/btnTutorial" android:layout_width="match_parent" 
-        android:layout_height="wrap_content" android:text="📖 NÁVOD (Jak získat token)" 
+        android:layout_height="wrap_content" android:text="📖 NÁVOD / TUTORIAL" 
         android:backgroundTint="#7289DA" android:textColor="#FFFFFF" android:textStyle="bold"/>
 
     <EditText android:id="@+id/codeInput" android:layout_width="match_parent" 
         android:layout_height="0dp" android:layout_weight="1" android:textColor="#FFFFFF"
         android:gravity="top" android:layout_marginTop="10dp" android:background="#23272A" android:padding="10dp"
-        android:text="token = TVUJ_TOKEN_ZDE\nprefix = !\nslash = ano\njazyk = cz\n\nprikaz(ping)\nodpoved(Pong!)\n"/>
+        android:text="jazyk = cz\ntoken = TVUJ_TOKEN_ZDE\nprefix = !\nslash = ano\n\nprikaz ping\nodpoved Tohle je ten nejlehci bot na svete!\n"/>
 
     <Button android:id="@+id/btnStart" android:layout_width="match_parent" 
         android:layout_height="60dp" android:text="🚀 SPUSTIT BOTA" 
