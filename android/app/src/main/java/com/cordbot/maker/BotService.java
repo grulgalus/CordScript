@@ -18,8 +18,9 @@ public class BotService extends Service {
     private JDA jda;
     private PowerManager.WakeLock wakeLock;
 
-    private void sendLog(String msg) {
+    public void sendLog(String msg) {
         Intent intent = new Intent("com.cordbot.LOG");
+        intent.setPackage(getPackageName()); // Bezpečné směrování logu pro Android 14
         intent.putExtra("LOG", msg);
         sendBroadcast(intent);
     }
@@ -30,24 +31,48 @@ public class BotService extends Service {
         String lang = intent.getStringExtra("LANG"); boolean useSlash = intent.getBooleanExtra("SLASH", true);
         String prefix = intent.getStringExtra("PREFIX");
 
-        NotificationChannel channel = new NotificationChannel("BotChannel", "CordBot", NotificationManager.IMPORTANCE_LOW);
-        getSystemService(NotificationManager.class).createNotificationChannel(channel);
-        startForeground(1, new NotificationCompat.Builder(this, "BotChannel").setContentTitle("Bot běží").setSmallIcon(android.R.drawable.ic_dialog_info).build());
+        try {
+            NotificationChannel channel = new NotificationChannel("BotChannel", "CordBot", NotificationManager.IMPORTANCE_LOW);
+            getSystemService(NotificationManager.class).createNotificationChannel(channel);
+            Notification notification = new NotificationCompat.Builder(this, "BotChannel")
+                .setContentTitle("Bot běží")
+                .setSmallIcon(android.R.drawable.sym_def_app_icon) // Změněna ikona na tu, která 100% existuje všude
+                .build();
 
-        wakeLock = ((PowerManager) getSystemService(POWER_SERVICE)).newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "CordBot::Lock");
-        wakeLock.acquire();
+            if (Build.VERSION.SDK_INT >= 29) {
+                startForeground(1, notification, 1); // 1 = FOREGROUND_SERVICE_TYPE_DATA_SYNC
+            } else {
+                startForeground(1, notification);
+            }
+        } catch (Exception e) {
+            sendLog("⚠️ Upozornění: Notifikace pro pozadí byla zablokována Androidem.");
+        }
+
+        try {
+            wakeLock = ((PowerManager) getSystemService(POWER_SERVICE)).newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "CordBot::Lock");
+            wakeLock.acquire();
+        } catch (Exception e) {
+            sendLog("⚠️ Upozornění: Android zakázal WakeLock, bot se může uspat.");
+        }
 
         new Thread(() -> {
             try {
                 CordScriptParser parser = new CordScriptParser(code, lang, prefix, useSlash, this);
-                jda = JDABuilder.createDefault(token).enableIntents(GatewayIntent.MESSAGE_CONTENT).addEventListeners(parser).build();
+                jda = JDABuilder.createDefault(token)
+                    .enableIntents(GatewayIntent.MESSAGE_CONTENT)
+                    .addEventListeners(parser)
+                    .build();
                 jda.awaitReady();
 
                 if (useSlash) {
                     for (String cmdName : parser.getCommands().keySet()) jda.upsertCommand(cmdName, "Příkaz bota").queue();
                     sendLog("✅ Slash příkazy (/" + String.join(", /", parser.getCommands().keySet()) + ") nahrány!");
                 }
-            } catch (Exception e) { sendLog("❌ CHYBA: Zkontroluj token a Message Content Intent!"); }
+            } catch (IllegalArgumentException e) {
+                sendLog("❌ CHYBA DISCORDU: Chybí ti 'Message Content Intent' na Discord portálu!");
+            } catch (Exception e) { 
+                sendLog("❌ CHYBA: Zkontroluj token! Detaily: " + e.getMessage()); 
+            }
         }).start();
 
         return START_STICKY;
@@ -60,7 +85,6 @@ public class BotService extends Service {
     }
     @Override public IBinder onBind(Intent intent) { return null; }
     
-    // Parser teď může posílat logy
     class CordScriptParser extends ListenerAdapter {
         private String prefix; private boolean useSlash; private Map<String, String> commands; private BotService service;
 
