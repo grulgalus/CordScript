@@ -17,7 +17,8 @@ jobs:
       - name: Build Windows Java Executable
         run: |
           mkdir bin
-          javac -cp core -d bin windows/WindowsApp.java core/com/cordbot/core/CordCore.java
+          # TADY JE TEN ZÁZRAČNÝ FIX: -encoding UTF-8
+          javac -encoding UTF-8 -cp core -d bin windows/WindowsApp.java core/com/cordbot/core/CordCore.java
           jar cfe CordBot.jar WindowsApp -C bin .
           jpackage --type app-image --name CordBotNode --input . --main-jar CordBot.jar --main-class WindowsApp --dest dist
       - name: Upload Windows App
@@ -41,7 +42,7 @@ jobs:
           gradle-version: '8.4'
       - name: Inject Core to Android
         run: |
-          # Zkopíruje sdílené jádro CordCore přímo do Android složky před kompilací!
+          # Zkopíruje sdílené jádro CordCore přímo do Android složky před kompilací
           cp -r core/com android/app/src/main/java/
       - name: Build Android APK
         working-directory: ./android
