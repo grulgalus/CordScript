@@ -1,4 +1,4 @@
-name: Build Native Android & Windows
+name: Build Shared Java Core Apps
 
 on:
   push:
@@ -9,42 +9,45 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.10'
-      - name: Install PyInstaller and Discord
-        run: pip install pyinstaller discord.py
-      - name: Build Windows EXE
-        run: pyinstaller --onefile --windowed windows/main.py
-      - name: Upload Windows EXE
-        uses: actions/upload-artifact@v4
-        with:
-          name: CordBot-Windows-EXE
-          path: dist/*.exe
-
-  build-android:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '17'
-          
+      - name: Build Windows Java Executable
+        run: |
+          mkdir bin
+          javac -cp core -d bin windows/WindowsApp.java core/com/cordbot/core/CordCore.java
+          jar cfe CordBot.jar WindowsApp -C bin .
+          jpackage --type app-image --name CordBotNode --input . --main-jar CordBot.jar --main-class WindowsApp --dest dist
+      - name: Upload Windows App
+        uses: actions/upload-artifact@v4
+        with:
+          name: CordBot-Windows-JavaNode
+          path: dist/CordBotNode
+
+  build-android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v3
         with:
           gradle-version: '8.4'
-        
-      - name: Build Android APK (Native Kotlin)
+      - name: Inject Core to Android
+        run: |
+          # Zkopíruje sdílené jádro CordCore přímo do Android složky před kompilací!
+          cp -r core/com android/app/src/main/java/
+      - name: Build Android APK
         working-directory: ./android
         run: gradle assembleDebug
-        
       - name: Upload Android APK
         uses: actions/upload-artifact@v4
         with:
-          name: CordBot-Android-Native-APK
+          name: CordBot-Android-Java
           path: android/app/build/outputs/apk/debug/*.apk
