@@ -1,104 +1,101 @@
 package com.cordbot.maker;
 
-import android.Manifest;
-import android.content.BroadcastReceiver;
-import android.content.Context;
-import android.content.Intent;
-import android.content.IntentFilter;
-import android.os.Build;
 import android.os.Bundle;
 import android.text.InputType;
 import android.widget.*;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.app.ActivityCompat;
 import com.cordbot.core.CordCore;
+
+import net.dv8tion.jda.api.JDABuilder;
+import net.dv8tion.jda.api.JDA;
+import net.dv8tion.jda.api.requests.GatewayIntent;
+import net.dv8tion.jda.api.events.session.ReadyEvent;
+import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
+import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
+import net.dv8tion.jda.api.hooks.ListenerAdapter;
+import java.util.Map;
 
 public class MainActivity extends AppCompatActivity {
     String botToken = ""; 
     String botLang = "cz"; 
     boolean botSlash = true; 
     String botPrefix = "!";
+    
     TextView consoleOut;
+    JDA jda = null; // Bot sedí přímo v hlavní aplikaci!
 
-    private BroadcastReceiver logReceiver = new BroadcastReceiver() {
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            try {
-                String log = intent.getStringExtra("LOG");
-                if(log != null && consoleOut != null) consoleOut.append(log + "\n");
-            } catch (Exception e) { /* Ignorovat chyby při výpisu */ }
-        }
-    };
+    // Funkce, která bezpečně vypíše text do zelené konzole
+    public void logToConsole(String msg) {
+        runOnUiThread(() -> {
+            if (consoleOut != null) consoleOut.append(msg + "\n");
+            // Automatické rolování dolů by se dalo přidat přes ScrollView, ale tohle je základ
+        });
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        try {
-            super.onCreate(savedInstanceState); 
-            setContentView(R.layout.activity_main);
-        } catch (Exception e) { return; }
+        super.onCreate(savedInstanceState); 
+        setContentView(R.layout.activity_main);
         
-        try {
-            if (Build.VERSION.SDK_INT >= 33) ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.POST_NOTIFICATIONS}, 101);
-        } catch (Exception e) { /* Štít chytil chybu */ }
-        
-        try {
-            if (Build.VERSION.SDK_INT >= 33) {
-                registerReceiver(logReceiver, new IntentFilter("com.cordbot.LOG"), Context.RECEIVER_NOT_EXPORTED);
-            } else {
-                registerReceiver(logReceiver, new IntentFilter("com.cordbot.LOG"));
-            }
-        } catch (Exception e) { /* Štít chytil chybu */ }
-
         EditText codeInput = findViewById(R.id.codeInput);
         consoleOut = findViewById(R.id.consoleOutput);
         
         findViewById(R.id.btnTutorial).setOnClickListener(v -> {
-            try {
-                new AlertDialog.Builder(this).setTitle("Návod").setMessage(CordCore.getTutorial(botLang)).setPositiveButton("OK", null).show();
-            } catch (Exception e) {}
+            new AlertDialog.Builder(this).setTitle("Návod").setMessage(CordCore.getTutorial(botLang)).setPositiveButton("OK", null).show();
         });
 
-        findViewById(R.id.btnSettings).setOnClickListener(v -> {
-            try { openSettings(); } catch (Exception e) {}
-        });
+        findViewById(R.id.btnSettings).setOnClickListener(v -> openSettings());
 
         findViewById(R.id.btnStart).setOnClickListener(v -> {
-            try {
-                String code = codeInput.getText().toString();
-                String errorMsg = CordCore.validateCode(code, botLang, botToken);
-                if (errorMsg != null) { 
-                    new AlertDialog.Builder(this).setTitle("Chyba v kódu 🕵️").setMessage(errorMsg).setPositiveButton("OK", null).show(); 
-                    return; 
-                }
-
-                consoleOut.setText("Startuji bota...\n");
-                Intent intent = new Intent(this, BotService.class);
-                intent.putExtra("CODE", code); 
-                intent.putExtra("TOKEN", botToken); 
-                intent.putExtra("LANG", botLang); 
-                intent.putExtra("SLASH", botSlash); 
-                intent.putExtra("PREFIX", botPrefix);
-                
-                // TADY TO PŘEDTÍM PADALO - TEĎ TO CHYTÍME!
-                if (Build.VERSION.SDK_INT >= 26) {
-                    startForegroundService(intent);
-                } else {
-                    startService(intent);
-                }
-            } catch (Exception e) {
-                // APLIKACE SE NEZAVŘE, CHYBA SE VYPÍŠE SEM:
-                consoleOut.append("❌ SYSTÉMOVÁ CHYBA (ZACHYCENA): " + e.getMessage() + "\n");
-                consoleOut.append("⚠️ Android zablokoval spuštění na pozadí. Zkontroluj oprávnění.\n");
+            String code = codeInput.getText().toString();
+            String errorMsg = CordCore.validateCode(code, botLang, botToken);
+            
+            if (errorMsg != null) { 
+                new AlertDialog.Builder(this).setTitle("Chyba v kódu 🕵️").setMessage(errorMsg).setPositiveButton("OK", null).show(); 
+                return; 
             }
+
+            if (jda != null) {
+                logToConsole("⚠️ Bot už běží! Nejdřív ho zastav.");
+                return;
+            }
+
+            logToConsole("🚀 Spouštím bota v živém režimu...");
+            
+            // Bot se spustí ve vedlejším vlákně přímo uvnitř aplikace!
+            new Thread(() -> {
+                try {
+                    CordScriptParser parser = new CordScriptParser(code, botLang, botPrefix, botSlash);
+                    jda = JDABuilder.createDefault(botToken)
+                        .enableIntents(GatewayIntent.MESSAGE_CONTENT)
+                        .addEventListeners(parser)
+                        .build();
+                    jda.awaitReady();
+
+                    if (botSlash) {
+                        for (String cmdName : parser.getCommands().keySet()) {
+                            jda.upsertCommand(cmdName, "Příkaz bota").queue();
+                        }
+                        logToConsole("✅ Slash příkazy uloženy na Discord!");
+                    }
+                } catch (IllegalArgumentException e) {
+                    logToConsole("❌ CHYBA DISCORDU: Chybí ti 'Message Content Intent' na webu!");
+                    jda = null;
+                } catch (Exception e) {
+                    logToConsole("❌ CHYBA: " + e.getMessage());
+                    jda = null;
+                }
+            }).start();
         });
 
         findViewById(R.id.btnStop).setOnClickListener(v -> {
-            try {
-                stopService(new Intent(this, BotService.class));
-                consoleOut.append("[INFO] Bot byl zastaven.\n");
-            } catch (Exception e) {
-                consoleOut.append("❌ Chyba při zastavování: " + e.getMessage() + "\n");
+            if (jda != null) {
+                jda.shutdownNow();
+                jda = null;
+                logToConsole("🛑 Bot byl úspěšně zastaven.");
+            } else {
+                logToConsole("⚠️ Bot momentálně neběží.");
             }
         });
     }
@@ -136,15 +133,49 @@ public class MainActivity extends AppCompatActivity {
             .setTitle("⚙️ Nastavení Bota")
             .setView(layout)
             .setPositiveButton("ULOŽIT", (dialog, which) -> {
-                botToken = tokenInput.getText().toString(); 
+                botToken = tokenInput.getText().toString().trim(); 
                 botSlash = slashSwitch.isChecked(); 
-                botPrefix = prefixInput.getText().toString(); 
+                botPrefix = prefixInput.getText().toString().trim(); 
                 botLang = langSwitch.isChecked() ? "en" : "cz";
+                logToConsole("⚙️ Nastavení bylo uloženo.");
             }).show();
     }
     
     @Override 
     protected void onDestroy() { 
-        try { super.onDestroy(); unregisterReceiver(logReceiver); } catch (Exception e) {} 
+        if (jda != null) jda.shutdownNow();
+        super.onDestroy(); 
+    }
+
+    // Náš starý dobrý parser přesunut přímo sem!
+    class CordScriptParser extends ListenerAdapter {
+        private String prefix; private boolean useSlash; private Map<String, String> commands; 
+
+        public CordScriptParser(String code, String lang, String prefix, boolean useSlash) {
+            this.prefix = prefix; this.useSlash = useSlash; this.commands = CordCore.getCommands(code, lang); 
+        }
+        public Map<String, String> getCommands() { return commands; }
+        
+        @Override public void onReady(ReadyEvent event) { 
+            logToConsole("✅ Bot " + event.getJDA().getSelfUser().getName() + " je ONLINE!"); 
+        }
+
+        @Override public void onMessageReceived(MessageReceivedEvent event) {
+            if (useSlash || event.getAuthor().isBot()) return;
+            String msg = event.getMessage().getContentRaw();
+            if (msg.startsWith(prefix)) {
+                String cmd = msg.substring(prefix.length()).trim().split(" ")[0];
+                if (commands.containsKey(cmd)) {
+                    logToConsole("📩 " + event.getAuthor().getName() + " napsal(a): " + msg);
+                    event.getChannel().sendMessage(commands.get(cmd)).queue();
+                }
+            }
+        }
+        @Override public void onSlashCommandInteraction(SlashCommandInteractionEvent event) {
+            if (useSlash && commands.containsKey(event.getName())) {
+                logToConsole("🚀 " + event.getUser().getName() + " použil(a) /" + event.getName());
+                event.reply(commands.get(event.getName())).queue();
+            }
+        }
     }
 }
