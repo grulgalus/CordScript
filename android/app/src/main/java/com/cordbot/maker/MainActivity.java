@@ -23,18 +23,23 @@ public class MainActivity extends AppCompatActivity {
         }
 
         EditText codeInput = findViewById(R.id.codeInput);
-        
         findViewById(R.id.btnTutorial).setOnClickListener(v -> showTutorial());
 
         findViewById(R.id.btnStart).setOnClickListener(v -> {
             String code = codeInput.getText().toString();
-            String token = CordCore.getSetting(code, "token", "");
             
-            if (token.isEmpty() || token.equals("TVUJ_TOKEN_ZDE")) {
-                Toast.makeText(this, "CHYBA: Musíš vložit svůj Token místo TVUJ_TOKEN_ZDE!", Toast.LENGTH_LONG).show();
-                return;
+            // INTELIGENTNÍ KONTROLA CHYB
+            String errorMsg = CordCore.validateCode(code);
+            if (errorMsg != null) {
+                new AlertDialog.Builder(this)
+                    .setTitle("Chyba v kódu 🕵️")
+                    .setMessage(errorMsg)
+                    .setPositiveButton("OPRAVIT KÓD", null)
+                    .show();
+                return; // Zastaví start bota
             }
 
+            String token = CordCore.getSetting(code, "token", "");
             Intent intent = new Intent(this, BotService.class);
             intent.putExtra("CODE", code);
             intent.putExtra("TOKEN", token);
@@ -54,15 +59,14 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void showTutorial() {
-        String msg = "1. Běž na stránku: discord.com/developers/applications\n\n" +
-                     "2. Přihlaš se a klikni na 'New Application'\n\n" +
-                     "3. Napiš jméno a potvrď\n\n" +
-                     "4. Vlevo vyber 'Bot'\n\n" +
-                     "5. ⚠️ DŮLEŽITÉ: Sjeď dolů a zapni 'Message Content Intent' (Jinak appka spadne!)\n\n" +
-                     "6. Nahoře klikni na 'Reset Token', dej COPY a vlož ho do kódu k nápisu 'token ='";
+        String msg = "1. Běž na: discord.com/developers/applications\n\n" +
+                     "2. Dej 'New Application' a jméno bota\n\n" +
+                     "3. Vlevo vyber 'Bot'\n\n" +
+                     "4. ⚠️ DŮLEŽITÉ: Sjeď dolů a zapni 'Message Content Intent'!\n\n" +
+                     "5. Dej 'Reset Token', zkopíruj ho a vlož k nápisu 'token ='";
                      
         new AlertDialog.Builder(this)
-            .setTitle("Jak získat Token (Návod)")
+            .setTitle("Jak získat Token")
             .setMessage(msg)
             .setPositiveButton("ROZUMÍM", null)
             .show();
