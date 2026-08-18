@@ -37,8 +37,17 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState); 
         setContentView(R.layout.activity_main);
         
-        EditText codeInput = findViewById(R.id.codeInput);
         consoleOut = findViewById(R.id.consoleOutput);
+
+        // ========================================================
+        // GLOBAL CRASH HANDLER: Zabrání tomu, aby se aplikace zavřela!
+        // ========================================================
+        Thread.setDefaultUncaughtExceptionHandler((thread, throwable) -> {
+            logToConsole("💥 FATÁLNÍ CRASH (ZACHYCEN): " + throwable.toString());
+            // Tohle zachrání appku před úplným zavřením (pádem na domovskou obrazovku)
+        });
+
+        EditText codeInput = findViewById(R.id.codeInput);
         
         findViewById(R.id.btnTutorial).setOnClickListener(v -> {
             new AlertDialog.Builder(this).setTitle("Návod").setMessage(CordCore.getTutorial(botLang)).setPositiveButton("OK", null).show();
@@ -60,9 +69,8 @@ public class MainActivity extends AppCompatActivity {
                 return;
             }
 
-            // MAGIE: Přikáže telefonu, aby NIKDY nezhasínal displej!
             getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
-            logToConsole("🚀 Spouštím bota (Displej teď nezhasne!)...");
+            logToConsole("🚀 Spouštím bota...");
             
             new Thread(() -> {
                 try {
@@ -77,10 +85,16 @@ public class MainActivity extends AppCompatActivity {
                         for (String cmdName : parser.getCommands().keySet()) {
                             jda.upsertCommand(cmdName, "Příkaz bota").queue();
                         }
-                        logToConsole("✅ Slash příkazy uloženy na Discord!");
+                        logToConsole("✅ Slash příkazy uloženy!");
                     }
-                } catch (Exception e) {
-                    logToConsole("❌ CHYBA: " + e.getMessage());
+                // ========================================================
+                // MAGICKÉ SLOVO THROWABLE: Chytí i to, co normálně zabíjí appky
+                // ========================================================
+                } catch (Throwable t) { 
+                    logToConsole("❌ KATASTROFICKÁ CHYBA: " + t.toString());
+                    if (t.getCause() != null) {
+                        logToConsole("Důvod: " + t.getCause().toString());
+                    }
                     jda = null;
                     runOnUiThread(() -> getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON));
                 }
@@ -91,9 +105,8 @@ public class MainActivity extends AppCompatActivity {
             if (jda != null) {
                 jda.shutdownNow();
                 jda = null;
-                // Když se bot vypne, mobil může zase normálně usínat
                 getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
-                logToConsole("🛑 Bot byl zastaven. Displej se může opět uspat.");
+                logToConsole("🛑 Bot byl zastaven.");
             } else {
                 logToConsole("⚠️ Bot momentálně neběží.");
             }
