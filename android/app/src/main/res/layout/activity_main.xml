@@ -4,22 +4,23 @@
     android:orientation="vertical" android:padding="16dp" android:background="#2C2F33">
 
     <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
-        <Button android:id="@+id/btnTutorial" android:layout_width="0dp" android:layout_weight="1"
-            android:layout_height="wrap_content" android:text="📖 NÁVOD" android:backgroundTint="#7289DA" android:textColor="#FFFFFF"/>
-        <Button android:id="@+id/btnSettings" android:layout_width="0dp" android:layout_weight="1"
-            android:layout_height="wrap_content" android:text="⚙️ NASTAVENÍ" android:backgroundTint="#4F545C" android:textColor="#FFFFFF" android:layout_marginLeft="5dp"/>
+        <Button android:id="@+id/btnTutorial" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="📖 NÁVOD" android:backgroundTint="#7289DA" android:textColor="#FFFFFF"/>
+        <Button android:id="@+id/btnSettings" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="⚙️ NASTAVENÍ" android:backgroundTint="#4F545C" android:textColor="#FFFFFF" android:layout_marginLeft="5dp"/>
     </LinearLayout>
 
     <EditText android:id="@+id/codeInput" android:layout_width="match_parent" 
-        android:layout_height="0dp" android:layout_weight="1" android:textColor="#FFFFFF"
+        android:layout_height="0dp" android:layout_weight="1.2" android:textColor="#FFFFFF"
         android:gravity="top" android:layout_marginTop="10dp" android:background="#23272A" android:padding="10dp"
-        android:text="prikaz ping\nodpoved Tohle je ten nejlehci bot na svete!\n"/>
+        android:text="prikaz ping:\n    odpoved Tohle je ten nejlehci bot na svete!\n"/>
 
-    <Button android:id="@+id/btnStart" android:layout_width="match_parent" 
-        android:layout_height="60dp" android:text="🚀 SPUSTIT BOTA" 
-        android:backgroundTint="#43B581" android:layout_marginTop="10dp" android:textStyle="bold"/>
-        
-    <Button android:id="@+id/btnStop" android:layout_width="match_parent" 
-        android:layout_height="50dp" android:text="🛑 ZASTAVIT" 
-        android:backgroundTint="#F04747" android:layout_marginTop="5dp"/>
+    <!-- NOVÁ KONZOLE PRO ANDROID -->
+    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Konzole bota:" android:textColor="#99AAB5" android:layout_marginTop="10dp" />
+    <ScrollView android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="0.8" android:background="#000000" android:padding="5dp">
+        <TextView android:id="@+id/consoleOutput" android:layout_width="match_parent" android:layout_height="wrap_content" android:textColor="#00FF00" android:fontFamily="monospace" android:text="Čekám na spuštění...\n" />
+    </ScrollView>
+
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:layout_marginTop="10dp">
+        <Button android:id="@+id/btnStart" android:layout_width="0dp" android:layout_weight="1" android:layout_height="60dp" android:text="🚀 SPUSTIT" android:backgroundTint="#43B581"/>
+        <Button android:id="@+id/btnStop" android:layout_width="0dp" android:layout_weight="1" android:layout_height="60dp" android:text="🛑 ZASTAVIT" android:backgroundTint="#F04747" android:layout_marginLeft="5dp"/>
+    </LinearLayout>
 </LinearLayout>

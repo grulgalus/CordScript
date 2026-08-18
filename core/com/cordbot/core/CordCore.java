@@ -6,13 +6,13 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class CordCore {
-    // Přijímá jazyk z nastavení, ne z textu!
     public static Map<String, String> getCommands(String code, String lang) {
         String cmdWord = lang.equals("en") ? "command" : "prikaz";
         String repWord = lang.equals("en") ? "reply" : "odpoved";
 
         Map<String, String> commands = new HashMap<>();
-        Matcher m = Pattern.compile(cmdWord + "\\s+(.+?)\\s+" + repWord + "\\s+(.+?)(?=\\s+" + cmdWord + "|\\z)", Pattern.DOTALL).matcher(code);
+        // Regex teď ignoruje dvojtečku a sežere 4 mezery před odpovědí!
+        Matcher m = Pattern.compile(cmdWord + "\\s+([^:\\n]+):?\\s+" + repWord + "\\s+(.+?)(?=\\s+" + cmdWord + "|\\z)", Pattern.DOTALL).matcher(code);
         while (m.find()) {
             commands.put(m.group(1).trim(), m.group(2).trim());
         }
@@ -35,19 +35,13 @@ public class CordCore {
                         : "❌ CHYBA: Chybí Token!\n💡 NÁPOVĚDA: Klikni na '⚙️ NASTAVENÍ' a vlož ho tam.";
         }
 
-        String lowerCode = code.toLowerCase();
-        if (!isEn) {
-            if (lowerCode.contains("přikaz") || lowerCode.contains("příkaz")) return "❌ CHYBA: Překlep 'přikaz'. Napiš to čistě jako 'prikaz'.";
-            if (lowerCode.contains("odpověd") || lowerCode.contains("odpověď")) return "❌ CHYBA: Překlep 'odpověď'. Napiš to čistě jako 'odpoved'.";
-        }
-
         String cmdWord = isEn ? "command" : "prikaz";
         String repWord = isEn ? "reply" : "odpoved";
 
         int cmdCount = code.split(cmdWord + "\\s").length - 1;
         int repCount = code.split(repWord + "\\s").length - 1;
 
-        if (cmdCount > repCount) return isEn ? "❌ ERROR: Missing reply!" : "❌ CHYBA: Chybí odpověď k nějakému příkazu!";
+        if (cmdCount > repCount) return isEn ? "❌ ERROR: Missing reply!" : "❌ CHYBA: Chybí odpověď k nějakému příkazu!\n💡 Zkus:\nprikaz neco:\n    odpoved text";
         if (repCount > cmdCount) return isEn ? "❌ ERROR: Missing command keyword!" : "❌ CHYBA: Chybí slovo 'prikaz'!";
         if (cmdCount == 0) return isEn ? "⚠️ WARNING: Bot is empty!" : "⚠️ VAROVÁNÍ: Kód je prázdný!";
         
